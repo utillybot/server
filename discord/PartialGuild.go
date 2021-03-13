@@ -1,4 +1,4 @@
-package helpers
+package discord
 
 type PartialGuild struct {
 	Id          string   `json:"id"`
@@ -8,4 +8,3 @@ type PartialGuild struct {
 	Permissions string   `json:"permissions"`
 	Features    []string `json:"features"`
 }
-

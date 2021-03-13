@@ -2,9 +2,10 @@ package middlewares
 
 import (
 	"context"
-	"encoding/json"
 	"github.com/go-chi/chi"
+	"github.com/utillybot/server/discord"
 	"github.com/utillybot/server/helpers"
+	"github.com/utillybot/server/redisClient"
 	"net/http"
 )
 
@@ -12,41 +13,21 @@ const contextKeyGuild = helpers.ContextKey("guild")
 
 func ValidateGuild(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		session, err := GetSessionData(r.Context())
+		token, err := GetAccessToken(r.Context())
 		if err != nil {
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-			return
-		}
-		token := session.AccessToken
-
-		req, err := http.NewRequest(http.MethodGet, "https://discord.com/api/v8/users/@me/guilds", nil)
-
-		if err != nil {
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			helpers.HttpError(w, http.StatusInternalServerError)
 			return
 		}
 
-		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("Authorization", "Bearer "+token)
-
-		result, err := http.DefaultClient.Do(req)
-
+		guilds, err := discord.GetGuilds(token)
 		if err != nil {
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-			return
-		}
-
-		var guilds []helpers.PartialGuild
-
-		err = json.NewDecoder(result.Body).Decode(&guilds)
-		if err != nil{
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			helpers.HttpError(w, http.StatusInternalServerError)
 			return
 		}
 
 		id := chi.URLParam(r, "id")
 
-		var foundGuild helpers.PartialGuild
+		var foundGuild discord.PartialGuild
 		for _, v := range guilds {
 			if v.Id == id {
 				foundGuild = v
@@ -73,13 +54,13 @@ func ValidateGuild(next http.Handler) http.Handler {
 	})
 }
 
-func GetGuild (ctx context.Context) *helpers.PartialGuild {
-	guild := ctx.Value(contextKeyGuild).(*helpers.PartialGuild)
+func GetCurrentGuild(ctx context.Context) *discord.PartialGuild {
+	guild := ctx.Value(contextKeyGuild).(*discord.PartialGuild)
 	return guild
 }
 
 func GuildExists(id string) bool {
-	for _, v := range helpers.GetGuilds() {
+	for _, v := range redisClient.GetGuilds() {
 		if v == id {
 			return true
 		}

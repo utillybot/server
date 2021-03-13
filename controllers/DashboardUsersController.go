@@ -1,46 +1,50 @@
 package controllers
 
 import (
+	"encoding/json"
 	"github.com/go-chi/chi"
+	"github.com/utillybot/server/discord"
+	"github.com/utillybot/server/helpers"
 	"github.com/utillybot/server/middlewares"
-	"io/ioutil"
 	"net/http"
 )
 
-func DashboardUsersController(r chi.Router) {
+func DashboardUsersController() chi.Router {
+	r := chi.NewRouter()
+
 	r.Use(middlewares.IsAuthenticated)
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-		session, err := middlewares.GetSessionData(r.Context())
+		token, err := middlewares.GetAccessToken(r.Context())
 		if err != nil {
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			helpers.HttpError(w, http.StatusInternalServerError)
+			return
+		}
+		user, err := middlewares.GetCurrentUser(r.Context())
+
+		if user == nil || err != nil {
+			user, err := discord.GetUser(token)
+			if err != nil {
+				helpers.HttpError(w, http.StatusInternalServerError)
+				return
+			}
+
+			session := middlewares.GetSession(r.Context())
+			session.Values["User"] = user
+			err = session.Save(r, w)
+			if err != nil {
+				helpers.HttpError(w, http.StatusInternalServerError)
+				return
+			}
+		}
+
+		response, err := json.Marshal(user)
+		if err != nil {
+			helpers.HttpError(w, http.StatusInternalServerError)
 			return
 		}
 
-		token := session.AccessToken
-
-		req, err := http.NewRequest(http.MethodGet, "https://discord.com/api/v8/users/@me", nil)
-
-		if err != nil{
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-			return
-		}
-
-		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("Authorization", "Bearer " + token)
-
-		result, err := http.DefaultClient.Do(req)
-
-		if err != nil{
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-			return
-		}
-
-		body, err := ioutil.ReadAll(result.Body)
-		if err != nil{
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-			return
-		}
-
-		_, _ = w.Write(body)
+		_, _ = w.Write(response)
 	})
+
+	return r
 }

@@ -1,42 +1,17 @@
-package helpers
+package redisClient
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
-	"time"
-
-	"github.com/go-redis/redis/v8"
 )
 
-var guilds []string
-var redisClient *redis.Client
+var guildIds []string
 
-func StartRedis() {
-	url, _ := os.LookupEnv("REDIS_URL")
-	opt, _ := redis.ParseURL(url)
-	redisClient = redis.NewClient(&redis.Options{
-		Addr:     opt.Addr,
-		Password: opt.Password,
-		DB:       0,
-	})
-
-	defer redisClient.Close()
-
-	err := redisClient.Ping(context.Background()).Err()
-	if err != nil {
-		// Sleep for 3 seconds and wait for Redis to initialize
-		time.Sleep(3 * time.Second)
-		err := redisClient.Ping(context.Background()).Err()
-		if err != nil {
-			panic(err)
-		}
-	}
-
+func StartListening() {
 	ctx := context.Background()
 	// Subscribe to the Topic given
-	topic := redisClient.Subscribe(ctx, "guilds", "guildCreate")
+	topic := client.Subscribe(ctx, "guilds", "guildCreate")
 	// Get the Channel to use
 	channel := topic.Channel()
 	// Iterate any messages sent on the channel
@@ -49,7 +24,7 @@ func StartRedis() {
 				panic(err)
 			}
 
-			guilds = payload.Guilds
+			guildIds = payload.Guilds
 		} else if msg.Channel == "guildCreate" {
 			payload := &guildCreatePayload{}
 
@@ -57,18 +32,9 @@ func StartRedis() {
 				panic(err)
 			}
 
-			guilds = append(guilds, payload.Guild)
+			guildIds = append(guildIds, payload.Guild)
 		}
-
 	}
-}
-
-func GetRedisClient() *redis.Client {
-	return redisClient
-}
-
-func GetGuilds() []string {
-	return guilds
 }
 
 type guildsPayload struct {
@@ -99,4 +65,8 @@ func (u *guildCreatePayload) UnmarshalBinary(data []byte) error {
 		return err
 	}
 	return nil
+}
+
+func GetGuilds() []string {
+	return guildIds
 }

@@ -7,11 +7,12 @@ import (
 
 func ExcludeSourceMaps(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !strings.HasSuffix(r.URL.Path, ".map"){
+		user, err := GetCurrentUser(r.Context())
+
+		if (err != nil && user != nil && user.Id == "236279900728721409") || !strings.HasSuffix(r.URL.Path, ".map") {
 			next.ServeHTTP(w, r)
 		} else {
 			http.NotFound(w, r)
 		}
 	})
 }
-

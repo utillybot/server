@@ -3,43 +3,27 @@ package controllers
 import (
 	"encoding/json"
 	"github.com/go-chi/chi"
+	"github.com/utillybot/server/discord"
 	"github.com/utillybot/server/helpers"
 	"github.com/utillybot/server/middlewares"
 	"net/http"
 )
 
-func DashboardGuildsController(r chi.Router) {
+func DashboardGuildsController() chi.Router {
+	r := chi.NewRouter()
+
 	r.Use(middlewares.IsAuthenticated)
+	r.Route("/{id}", DashboardGuildController)
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-		session, err := middlewares.GetSessionData(r.Context())
+		token, err := middlewares.GetAccessToken(r.Context())
 		if err != nil {
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			helpers.HttpError(w, http.StatusInternalServerError)
 			return
 		}
 
-		token := session.AccessToken
-		req, err := http.NewRequest(http.MethodGet, "https://discord.com/api/v8/users/@me/guilds", nil)
-
-		if err != nil{
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-			return
-		}
-
-		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("Authorization", "Bearer " + token)
-
-		result, err := http.DefaultClient.Do(req)
-
-		if err != nil{
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-			return
-		}
-
-		var guilds []helpers.PartialGuild
-
-		err = json.NewDecoder(result.Body).Decode(&guilds)
-		if err != nil{
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		guilds, err := discord.GetGuilds(token)
+		if err != nil {
+			helpers.HttpError(w, http.StatusInternalServerError)
 			return
 		}
 
@@ -77,33 +61,16 @@ func DashboardGuildsController(r chi.Router) {
 		_, _ = w.Write(res)
 	})
 
-	r.Route("/{id}", func(r chi.Router) {
-		r.Use(middlewares.ValidateGuild)
-
-		r.Get("/",  func(w http.ResponseWriter, r *http.Request) {
-			guild := middlewares.GetGuild(r.Context())
-
-			res, err := json.Marshal(guild)
-
-			if err != nil {
-				http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-				return
-			}
-
-			_, _ = w.Write(res)
-		})
-	})
-
+	return r
 }
 
 type MappedGuild struct {
 	Name string `json:"name"`
 	Icon string `json:"icon"`
-	Id string `json:"id"`
+	Id   string `json:"id"`
 }
 
 type GetGuildsResponse struct {
 	Present    []MappedGuild `json:"present"`
 	NotPresent []MappedGuild `json:"notPresent"`
 }
-

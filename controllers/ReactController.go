@@ -1,17 +1,14 @@
-package handlers
+package controllers
 
 import (
-	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
 )
 
-func ReactHandler(staticPath string) http.HandlerFunc {
+func ReactController(staticPath string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-
-		if a, err := os.Stat(filepath.Join(staticPath, r.URL.Path)); os.IsNotExist(err) {
-			fmt.Println(a)
+		if _, err := os.Stat(filepath.Join(staticPath, r.URL.Path)); os.IsNotExist(err) {
 			http.ServeFile(w, r, filepath.Join(staticPath, "index.html"))
 			return
 		} else if err != nil {
@@ -22,4 +19,3 @@ func ReactHandler(staticPath string) http.HandlerFunc {
 		}
 	}
 }
-

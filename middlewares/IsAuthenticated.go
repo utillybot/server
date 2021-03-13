@@ -13,6 +13,5 @@ func IsAuthenticated(next http.Handler) http.Handler {
 		} else {
 			next.ServeHTTP(w, r)
 		}
-
 	})
 }
