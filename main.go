@@ -34,6 +34,7 @@ func main() {
 	router := chi.NewRouter()
 	router.Use(middlewares.RemoveTrailingSlash)
 	router.Use(middlewares.Sessions(store))
+	router.Use(middlewares.ExcludeSourceMaps)
 
 	router.Use(middleware.RequestID)
 	router.Use(middleware.RealIP)
