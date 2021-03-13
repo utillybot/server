@@ -2,7 +2,6 @@ package discord
 
 import (
 	"encoding/json"
-	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -56,69 +55,4 @@ func (d OAuth2) TokenRequest(options TokenRequestOptions) (*TokenRequestResult, 
 	}
 
 	return &result, err
-}
-
-func GetGuilds(token string) ([]PartialGuild, error) {
-	response, err := makeRequest("https://discord.com/api/v8/users/@me/guilds", RequestOptions{
-		Method: http.MethodGet,
-		Body:   nil,
-		Headers: map[string]string{
-			"Content-Type":  "application/json",
-			"Authorization": "Bearer " + token,
-		},
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	var guilds []PartialGuild
-
-	err = json.NewDecoder(response.Body).Decode(&guilds)
-	if err != nil {
-		return nil, err
-	}
-
-	return guilds, nil
-}
-
-func GetUser(token string) (*User, error) {
-	response, err := makeRequest("https://discord.com/api/v8/users/@me", RequestOptions{
-		Method: http.MethodGet,
-		Body:   nil,
-		Headers: map[string]string{
-			"Content-Type":  "application/json",
-			"Authorization": "Bearer " + token,
-		},
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	var user User
-
-	err = json.NewDecoder(response.Body).Decode(&user)
-	if err != nil {
-		return nil, err
-	}
-
-	return &user, nil
-}
-
-type RequestOptions struct {
-	Method  string
-	Body    io.Reader
-	Headers map[string]string
-}
-
-func makeRequest(url string, options RequestOptions) (*http.Response, error) {
-	req, err := http.NewRequest(options.Method, url, options.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	for key, val := range options.Headers {
-		req.Header.Set(key, val)
-	}
-
-	return http.DefaultClient.Do(req)
 }

@@ -4,6 +4,7 @@ import (
 	"encoding/gob"
 	"flag"
 	"github.com/antonlindstrom/pgstore"
+	"github.com/bwmarrin/discordgo"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/utillybot/server/controllers"
@@ -20,7 +21,7 @@ import (
 
 func main() {
 	gob.Register(discord.TokenRequestResult{})
-	gob.Register(discord.User{})
+	gob.Register(discordgo.User{})
 	staticPathPtr := flag.String("base-web-url", "./", "A relative or absolute path to the static web files")
 	flag.Parse()
 

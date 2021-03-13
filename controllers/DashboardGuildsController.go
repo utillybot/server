@@ -2,8 +2,8 @@ package controllers
 
 import (
 	"encoding/json"
+	"github.com/bwmarrin/discordgo"
 	"github.com/go-chi/chi"
-	"github.com/utillybot/server/discord"
 	"github.com/utillybot/server/helpers"
 	"github.com/utillybot/server/middlewares"
 	"net/http"
@@ -20,8 +20,12 @@ func DashboardGuildsController() chi.Router {
 			helpers.HttpError(w, http.StatusInternalServerError)
 			return
 		}
-
-		guilds, err := discord.GetGuilds(token)
+		discordClient, err := discordgo.New("Bearer " + token)
+		if err != nil {
+			helpers.HttpError(w, http.StatusInternalServerError)
+			return
+		}
+		guilds, err := discordClient.UserGuilds(0, "", "")
 		if err != nil {
 			helpers.HttpError(w, http.StatusInternalServerError)
 			return
@@ -35,7 +39,7 @@ func DashboardGuildsController() chi.Router {
 				mappedGuild := MappedGuild{
 					Name: guild.Name,
 					Icon: guild.Icon,
-					Id:   guild.Id,
+					Id:   guild.ID,
 				}
 
 				if middlewares.GuildExists(mappedGuild.Id) {

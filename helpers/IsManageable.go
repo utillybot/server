@@ -1,16 +1,14 @@
 package helpers
 
 import (
-	"github.com/utillybot/server/discord"
-	"strconv"
+	"github.com/bwmarrin/discordgo"
 )
 
-func IsManageable(guild discord.PartialGuild) bool {
-	permissions, _ := strconv.Atoi(guild.Permissions)
+func IsManageable(guild *discordgo.UserGuild) bool {
 	if guild.Owner {
 		return true
 	}
-	if permissions&0x00000008 == 1 {
+	if guild.Permissions&0x00000008 != 0 {
 		return true
 	}
 

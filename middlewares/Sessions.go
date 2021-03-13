@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"github.com/antonlindstrom/pgstore"
+	"github.com/bwmarrin/discordgo"
 	"github.com/gorilla/sessions"
 	"github.com/utillybot/server/discord"
 	"github.com/utillybot/server/helpers"
@@ -38,10 +39,10 @@ func GetAccessToken(ctx context.Context) (string, error) {
 	return tokens.AccessToken, nil
 }
 
-func GetCurrentUser(ctx context.Context) (*discord.User, error) {
+func GetCurrentUser(ctx context.Context) (*discordgo.User, error) {
 	session := GetSession(ctx)
 
-	user, ok := session.Values["User"].(discord.User)
+	user, ok := session.Values["User"].(discordgo.User)
 	if !ok {
 		return nil, errors.New("the user hasn't been fetched for this session yet")
 	}

@@ -2,8 +2,8 @@ package middlewares
 
 import (
 	"context"
+	"github.com/bwmarrin/discordgo"
 	"github.com/go-chi/chi"
-	"github.com/utillybot/server/discord"
 	"github.com/utillybot/server/helpers"
 	"github.com/utillybot/server/redisClient"
 	"net/http"
@@ -19,7 +19,12 @@ func ValidateGuild(next http.Handler) http.Handler {
 			return
 		}
 
-		guilds, err := discord.GetGuilds(token)
+		discordClient, err := discordgo.New("Bearer " + token)
+		if err != nil {
+			helpers.HttpError(w, http.StatusInternalServerError)
+			return
+		}
+		guilds, err := discordClient.UserGuilds(0, "", "")
 		if err != nil {
 			helpers.HttpError(w, http.StatusInternalServerError)
 			return
@@ -27,14 +32,14 @@ func ValidateGuild(next http.Handler) http.Handler {
 
 		id := chi.URLParam(r, "id")
 
-		var foundGuild discord.PartialGuild
+		var foundGuild *discordgo.UserGuild
 		for _, v := range guilds {
-			if v.Id == id {
+			if v.ID == id {
 				foundGuild = v
 			}
 		}
 
-		if foundGuild.Id == "" {
+		if foundGuild == nil {
 			http.Error(w, "The provided guild id was not one of the user's guilds.", http.StatusNotFound)
 			return
 		}
@@ -44,18 +49,18 @@ func ValidateGuild(next http.Handler) http.Handler {
 			return
 		}
 
-		if !GuildExists(foundGuild.Id) {
+		if !GuildExists(foundGuild.ID) {
 			http.Error(w, "The bot is not in the guild", http.StatusNotFound)
 			return
 		}
 
-		ctx := context.WithValue(r.Context(), contextKeyGuild, &foundGuild)
+		ctx := context.WithValue(r.Context(), contextKeyGuild, foundGuild)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 
-func GetCurrentGuild(ctx context.Context) *discord.PartialGuild {
-	guild := ctx.Value(contextKeyGuild).(*discord.PartialGuild)
+func GetCurrentGuild(ctx context.Context) *discordgo.UserGuild {
+	guild := ctx.Value(contextKeyGuild).(*discordgo.UserGuild)
 	return guild
 }
 
